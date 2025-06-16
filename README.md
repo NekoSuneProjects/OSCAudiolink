@@ -1,6 +1,6 @@
 # 🎵 OSCAudiolink for VRChat
 
-**OSCAudiolink** is a free and open project designed to bridge your **Spotify** (or any audio player) with **OSCAudiolink in VRChat**. Enjoy reactive visual experiences in your VRChat world powered by your favorite music — live, synced, and seamless.
+**OSCAudiolink** is a open project designed to bridge your **Spotify** (or any audio player) with **OSCAudiolink in VRChat**. Enjoy reactive visual experiences in your VRChat world powered by your favorite music — live, synced, and seamless.
 
 ---
 
