@@ -13,6 +13,43 @@
 
 ---
 
+🎨 Shader & Platform Compatibility
+🖥️ AudioLink Shader — PC Only
+
+The official AudioLink shader (used in many worlds and avatars) is only supported on PC. This is due to its complex lighting and visual features which do not run on Quest or mobile devices, since they lack support for custom PC shaders.
+🌐 Worlds — PC & Quest
+
+Many worlds are built to be cross-platform, meaning both PC and Quest users can join. However:
+
+    Only PC users will see the full AudioLink shader effects (with reactive visuals).
+
+    Quest/Mobile users will not see the shader unless a custom setup is used like OSCAudiolink.
+
+🧩 OSCAudiolink — Cross-Platform Avatar Support
+
+My custom OSCAudiolink system is built specifically so both PC and Quest/Mobile users can see visual feedback on avatars.
+✅ For Quest & Mobile:
+
+    Uses the standard VRChat SDK "Lite Shader" (Mobile-compatible)
+
+    Visuals are driven by emission color and material changes
+
+    Simple, performance-friendly, and works on all platforms
+
+✅ For PC:
+
+    Supports:
+
+        VRChat Standard Shader
+
+        LilToon (free and popular toon shader)
+
+        Poiyomi Pro (optional, not included — must be purchased separately)
+
+    ⚠️ Note: If you want to use Poiyomi Pro, you must subscribe to their Patreon and follow their license terms. It is not included with OSCAudiolink.
+
+---
+
 ## 💡 Suggestions & Feature Requests
 
 Your ideas make this project better!  
