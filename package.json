@@ -50,9 +50,9 @@
     }
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "NekoSuneVR",
+  "license": "MIT",
+  "description": "OSCAudiolink is Program use Audio to Vrchat OSC and Quest / Mobile Friendly",
   "dependencies": {
     "axios": "^1.7.7",
     "dgram": "^1.0.1",
