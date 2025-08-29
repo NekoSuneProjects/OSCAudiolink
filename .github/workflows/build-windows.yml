@@ -81,14 +81,14 @@ jobs:
       - name: Upload MSI and EXE Installers
         shell: powershell
         run: |
-          $targetPath = "myminio/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/"
+          $targetPath = "myminio/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/"
           .\mc.exe cp "dist/OSCAudioLink-Setup-${{ env.VERSION }}.msi" "$targetPath"
           .\mc.exe cp "dist/OSCAudioLink-Setup-${{ env.VERSION }}.exe" "$targetPath"
         
       - name: Upload Release Notes to MinIO
         shell: powershell
         run: |
-          .\mc.exe cp release_notes.txt myminio/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/release_notes.txt
+          .\mc.exe cp release_notes.txt myminio/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/release_notes.txt
 
       - name: Send Release Info to Discord
         shell: pwsh
@@ -103,7 +103,7 @@ jobs:
             embeds = @(
               @{
                 title = "New Release: v${{ env.VERSION }}${{ env.BUILD_TAG }}"
-                description = "$releaseNotes`n`n[Download EXE FILE](https://uploadminioger1.nekosunevr.co.uk/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.exe) | [Download MSI FILE](https://uploadminioger1.nekosunevr.co.uk/oscaudiolin/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.msi)"
+                description = "$releaseNotes`n`n[Download EXE FILE](https://uploadminioger1.nekosunevr.co.uk/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.exe) | [Download MSI FILE](https://uploadminioger1.nekosunevr.co.uk/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.msi)"
                 color = 16776960
                 footer = @{
                   text = "Released by GitHub Actions"
