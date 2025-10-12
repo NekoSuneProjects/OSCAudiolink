@@ -294,10 +294,10 @@
       });
 
       // Listen for the tokens from your server (use IPC or another method for receiving tokens)
-      window.electronAPI.receiveTokens((event, tokens) => {
+      /*window.electronAPI.receiveTokens((event, tokens) => {
         localStorage.setItem('spotify_access_token', tokens.accessToken);
         localStorage.setItem('spotify_refresh_token', tokens.refreshToken);
-      });
+      });*/
 
         // Display track info
       window.electronAPI.updateTrackInfo((event, trackInfo) => {
