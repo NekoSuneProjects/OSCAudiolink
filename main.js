@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const dgram = require('dgram');
 const settings = require('./settings');
 const path = require('path');
@@ -10,6 +10,21 @@ const {
 
 let mainWindow;
 const oscClient = dgram.createSocket('udp4');
+
+let tray;
+
+function createTray() {
+    tray = new Tray(path.join(__dirname, 'assets/icon.ico')); // Use your app icon
+    const contextMenu = Menu.buildFromTemplate([
+        { label: 'Show', click: () => mainWindow.show() },
+        { label: 'Quit', click: () => app.quit() }
+    ]);
+    tray.setToolTip('OSCAudiolink');
+    tray.setContextMenu(contextMenu);
+
+    // Show window on tray icon click
+    tray.on('click', () => mainWindow.show());
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -26,14 +41,19 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 
     // Optional: Hide the window instead of minimizing, if desired
+    // --- Minimize to tray ---
     mainWindow.on('minimize', (event) => {
         event.preventDefault();
         mainWindow.hide();
     });
 
+    // Optional: restore from tray
     mainWindow.on('restore', () => {
         mainWindow.show();
     });
+
+    // --- Create the tray after window exists ---
+    createTray();
 
     // Listen for changes to OSC port from renderer
     ipcMain.on('updateOscPort', (event, newPort) => {
