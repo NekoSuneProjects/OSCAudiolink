@@ -289,9 +289,9 @@
         }
       });
 
-      document.getElementById('linkSpotify').addEventListener('click', () => {
+      /*document.getElementById('linkSpotify').addEventListener('click', () => {
         window.open('http://yourserver.com/authorize', '_blank'); // Open the authorization link
-      });
+      });*/
 
       // Listen for the tokens from your server (use IPC or another method for receiving tokens)
       /*window.electronAPI.receiveTokens((event, tokens) => {
@@ -300,11 +300,11 @@
       });*/
 
         // Display track info
-      window.electronAPI.updateTrackInfo((event, trackInfo) => {
+      /*window.electronAPI.updateTrackInfo((event, trackInfo) => {
         document.getElementById('trackInfo').innerText = trackInfo
            ? `Now Playing: ${trackInfo.artist} - ${trackInfo.title}`
             : 'No track currently playing';
-      });
+      });*/
     </script>
   </body>
 </html>
