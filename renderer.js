@@ -138,16 +138,16 @@ function calculateLevels(dataArray) {
         let normalizedLevel;
         switch (band) {
             case 'bass':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .bass, 0.6) / 100, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * bass, 0.6) / 100, 0), 1);
                 break;
             case 'low':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .low, 0.6) / 150, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * low, 0.6) / 150, 0), 1);
                 break;
             case 'mid':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .mid, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * mid, 0.5) / 200, 0), 1);
                 break;
             case 'treble':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .treble, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * treble, 0.5) / 200, 0), 1);
                 break;
         }
 
