@@ -151,7 +151,7 @@ function calculateLevels(dataArray) {
                 break;
         }
 
-        const threshold = .thresholds[Object.keys(frequencyBands).indexOf(band)];
+        const threshold = thresholds[Object.keys(frequencyBands).indexOf(band)];
         normalizedLevel = (normalizedLevel > threshold) ? (normalizedLevel - threshold) / (1 - threshold) : 0;
 
         levels.push(Math.min(normalizedLevel, 1));
