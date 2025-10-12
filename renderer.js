@@ -17,7 +17,7 @@ const audioLinkSettings = {
     low: 1.2,        // Increased gain for low
     mid: 1.0,
     treble: 1.0,
-    legancy: false;
+    legancy: false,
     thresholds: [0.35, 0.35, 0.45, 0.45], // Lowered thresholds for bass and low
     crossovers: [0.0, 0.25, 0.5, 0.75],
     fadeLength: 0.25,
