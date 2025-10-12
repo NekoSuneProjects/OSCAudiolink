@@ -17,6 +17,7 @@ const audioLinkSettings = {
     low: 1.2,        // Increased gain for low
     mid: 1.0,
     treble: 1.0,
+    legancy: false;
     thresholds: [0.35, 0.35, 0.45, 0.45], // Lowered thresholds for bass and low
     crossovers: [0.0, 0.25, 0.5, 0.75],
     fadeLength: 0.25,
@@ -91,7 +92,7 @@ async function setupAudioAnalysis(deviceId) {
         const levels = calculateLevels(dataArray);
         updateWaveform(levels);
 
-        sendOsc(levels);
+        sendOsc(levels, audioLinkSettings.legancy);
 
         requestAnimationFrame(visualize);
     }
@@ -137,20 +138,20 @@ function calculateLevels(dataArray) {
         let normalizedLevel;
         switch (band) {
             case 'bass':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.bass, 0.6) / 100, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .bass, 0.6) / 100, 0), 1);
                 break;
             case 'low':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.low, 0.6) / 150, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .low, 0.6) / 150, 0), 1);
                 break;
             case 'mid':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.mid, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .mid, 0.5) / 200, 0), 1);
                 break;
             case 'treble':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.treble, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * .treble, 0.5) / 200, 0), 1);
                 break;
         }
 
-        const threshold = audioLinkSettings.thresholds[Object.keys(frequencyBands).indexOf(band)];
+        const threshold = .thresholds[Object.keys(frequencyBands).indexOf(band)];
         normalizedLevel = (normalizedLevel > threshold) ? (normalizedLevel - threshold) / (1 - threshold) : 0;
 
         levels.push(Math.min(normalizedLevel, 1));
@@ -160,13 +161,23 @@ function calculateLevels(dataArray) {
 }
 
 // Send OSC messages for VRChat
-function sendOsc(levels) {
-    const parameters = [
-        "/avatar/parameters/HUE",
-        "/avatar/parameters/Low",
-        "/avatar/parameters/Mid",
-        "/avatar/parameters/Treble"
-    ];
+function sendOsc(levels, legacy) {
+     let parameters 
+     if (legacy == true) { 
+         parameters = [
+            "/avatar/parameters/HUE",
+            "/avatar/parameters/Low",
+            "/avatar/parameters/Mid",
+            "/avatar/parameters/Treble"
+        ];
+     } else {
+         parameters = [
+            "/avatar/parameters/VRCOSC/NekosAudiolink/Bass",
+            "/avatar/parameters/VRCOSC/NekosAudiolink/Low",
+            "/avatar/parameters/VRCOSC/NekosAudiolink/Mid",
+            "/avatar/parameters/VRCOSC/NekosAudiolink/Treble"
+        ];
+     }
 
     levels.forEach((level, i) => {
         const formattedLevel = parseFloat(level.toFixed(2));
