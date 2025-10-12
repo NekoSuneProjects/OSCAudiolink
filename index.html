@@ -1,310 +1,350 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OSCAudiolink by NekoSuneVR</title>
 
-    <!-- TailwindCSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSCAudiolink by NekoSuneVR</title>
 
-    <script>
-      // Tailwind configuration
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              neon: "#00ffff",
-              accent: "#ff007f",
-              pinky: "#ff80bf",
-              greeny: "#4ade80",
-            },
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    // Tailwind configuration
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            neon: "#00ffff",
+            accent: "#ff007f",
+            pinky: "#b30059",
+            greeny: "#00994d",
           },
         },
-      };
-    </script>
+      },
+    };
+  </script>
 
-    <style>
-      .tab { display: none; }
-      .tab.active { display: block; }
-      #audioCanvas { width: 100%; height: 300px; }
+  <style>
+    .tab {
+      display: none;
+    }
 
-      /* Rainbow animation */
-      .rainbow-bg {
-        background: linear-gradient(270deg, #ff0080, #ff8c00, #40e0d0, #00ff80, #9932cc);
-        background-size: 1000% 1000%;
-        animation: rainbowShift 10s ease infinite;
+    .tab.active {
+      display: block;
+    }
+
+    #audioCanvas {
+      width: 100%;
+      height: 300px;
+    }
+
+    /* Rainbow animated gradient used for both borders and text */
+    @keyframes rainbowShift {
+      0% {
+        background-position: 0% 50%;
       }
-      @keyframes rainbowShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+
+      50% {
+        background-position: 100% 50%;
       }
-    </style>
-  </head>
 
-  <body
-    class="min-h-screen bg-gray-900 text-gray-100 transition-colors duration-300 p-4"
-  >
-    <div class="max-w-3xl mx-auto">
-      <h1 class="text-3xl font-bold text-center mb-6">
-        OSCAudiolink by <span class="text-accent">NekoSuneVR</span>
-      </h1>
+      100% {
+        background-position: 0% 50%;
+      }
+    }
 
-      <!-- Theme selector -->
-      <div class="flex justify-end mb-4">
-        <label for="themeSelect" class="mr-2">Theme:</label>
-        <select
-          id="themeSelect"
-          class="bg-gray-800 text-gray-100 rounded-md px-2 py-1"
-        >
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-          <option value="neon">Neon</option>
-          <option value="rainbow">Rainbow</option>
-          <option value="pink">Pink</option>
-          <option value="green">Green</option>
-        </select>
-      </div>
+    /* 🌈 Rainbow border for buttons */
+    .rainbow-border {
+      position: relative;
+      border-radius: 0.5rem;
+      /* rounded-lg match */
+      overflow: hidden;
+      isolation: isolate;
+    }
 
-      <!-- Tabs -->
-      <div class="flex justify-center space-x-2 mb-6">
-        <button
-          class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700"
-          onclick="openTab('waveform')"
-        >
-          Audio Wave
-        </button>
-        <button
-          class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700"
-          onclick="openTab('settings')"
-        >
-          Settings
-        </button>
-        <button
-          class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700"
-          onclick="openTab('connect')"
-        >
-          Connect
-        </button>
-      </div>
+    .rainbow-border::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      /* border thickness */
+      border-radius: inherit;
+      background: linear-gradient(270deg, #ff0080, #ff8c00, #40e0d0, #00ff80, #9932cc);
+      background-size: 500% 500%;
+      animation: rainbowShift 6s linear infinite;
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
 
-      <!-- Waveform -->
-      <div id="waveform" class="tab active text-center">
-        <canvas id="audioCanvas" class="rounded-lg bg-gray-800"></canvas>
-        <div class="flex justify-between text-sm mt-2 text-gray-400">
-          <span>Bass</span>
-          <span>Low</span>
-          <span>Mid</span>
-          <span>Treble</span>
-        </div>
-      </div>
+    /* 🌈 Rainbow text animation */
+    .rainbow-text {
+      background: linear-gradient(270deg, #ff0080, #ff8c00, #40e0d0, #00ff80, #9932cc);
+      background-size: 500% 500%;
+      animation: rainbowShift 6s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-      <!-- Settings -->
-      <div id="settings" class="tab space-y-4">
-        <div>
-          <label for="audioDeviceSelect" class="block mb-1 font-semibold">
-            Select Audio Device
-          </label>
-          <select
-            id="audioDeviceSelect"
-            class="bg-gray-800 text-gray-100 rounded-md px-3 py-2 w-full"
-          >
-            <option value="">Loading devices...</option>
-          </select>
-        </div>
+    /* Subtle glow for pink and green themes */
+    .pink-glow {
+      text-shadow: 0 0 10px #ff4da6, 0 0 20px #ff80c0;
+    }
 
-        <div>
-          <label for="portInput" class="block mb-1 font-semibold">OSC Port</label>
-          <input
-            type="number"
-            id="portInput"
-            class="bg-gray-800 text-gray-100 rounded-md px-3 py-2 w-full"
-            placeholder="Enter Port (e.g., 9000)"
-          />
-        </div>
+    .green-glow {
+      text-shadow: 0 0 10px #00ff80, 0 0 20px #00ffaa;
+    }
+  </style>
+</head>
 
-        <div>
-          <label class="block mb-1 font-semibold">Legacy Mode</label>
-          <label class="inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="legacyToggle" class="sr-only peer" />
-            <div
-              class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:bg-accent transition-all duration-300"
-            ></div>
-            <span class="ml-2 text-sm text-gray-300">Enable Legacy Mode</span>
-          </label>
-        </div>
+<body class="min-h-screen bg-gray-900 text-gray-100 transition-colors duration-300 p-4">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-6">
+      OSCAudiolink by <span class="text-accent">NekoSuneVR</span>
+    </h1>
 
-        <!-- Gains -->
-        <div>
-          <label class="block font-semibold mb-1">Bass Gain</label>
-          <input
-            type="range"
-            id="bassGain"
-            class="w-full accent-accent"
-            min="1"
-            max="5"
-            step="0.1"
-            value="2.5"
-          />
-        </div>
+    <!-- Theme selector -->
+    <div class="flex justify-end mb-4">
+      <label for="themeSelect" class="mr-2">Theme:</label>
+      <select id="themeSelect" class="bg-gray-800 text-gray-100 rounded-md px-2 py-1">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="neon">Neon</option>
+        <option value="rainbow">Rainbow</option>
+        <option value="pink">Pink</option>
+        <option value="green">Green</option>
+      </select>
+    </div>
 
-        <div>
-          <label class="block font-semibold mb-1">Low Gain</label>
-          <input
-            type="range"
-            id="lowGain"
-            class="w-full accent-accent"
-            min="1"
-            max="3"
-            step="0.1"
-            value="1"
-          />
-        </div>
+    <!-- Tabs -->
+    <div class="flex justify-center space-x-2 mb-6">
+      <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('waveform')">
+        Audio Wave
+      </button>
+      <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('settings')">
+        Settings
+      </button>
+      <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('connect')">
+        Connect
+      </button>
+    </div>
 
-        <div>
-          <label class="block font-semibold mb-1">Mid Gain</label>
-          <input
-            type="range"
-            id="midGain"
-            class="w-full accent-accent"
-            min="1"
-            max="3"
-            step="0.1"
-            value="1"
-          />
-        </div>
-
-        <div>
-          <label class="block font-semibold mb-1">Treble Gain</label>
-          <input
-            type="range"
-            id="trebleGain"
-            class="w-full accent-accent"
-            min="1"
-            max="3"
-            step="0.1"
-            value="1"
-          />
-        </div>
-
-        <button
-          id="toggleAudio"
-          class="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700 transition"
-        >
-          Start Audio
-        </button>
-      </div>
-
-      <!-- Connect -->
-      <div id="connect" class="tab space-y-3">
-        <h3 class="text-xl font-semibold mb-2">Spotify Integration</h3>
-        <button
-          id="linkSpotify"
-          class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-        >
-          Link Spotify
-        </button>
-        <div id="trackInfo" class="text-gray-300 mt-3"></div>
-        <label class="flex items-center mt-3">
-          <input class="mr-2" type="checkbox" id="liveTrackToggle" checked />
-          Enable Live Track Updates
-        </label>
+    <!-- Waveform -->
+    <div id="waveform" class="tab active text-center bg-gray-800 border border-gray-600 rounded-xl p-4 shadow-md">
+      <canvas id="audioCanvas" class="w-full h-64 rounded-lg bg-gray-900"></canvas>
+      <div class="flex justify-between text-sm mt-3 text-gray-400">
+        <span>Bass</span>
+        <span>Low</span>
+        <span>Mid</span>
+        <span>Treble</span>
       </div>
     </div>
 
-    <script src="renderer.js"></script>
-    <script>
-      // --- Tab switching ---
-      function openTab(tabId) {
-        document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
-        document.getElementById(tabId).classList.add("active");
+
+    <!-- Settings -->
+    <div id="settings" class="tab space-y-4 bg-gray-700 border border-gray-600 rounded-xl p-4 shadow-md text-white">
+      <div>
+        <label for="audioDeviceSelect" class="block mb-1 font-semibold">Select Audio Device</label>
+        <select id="audioDeviceSelect" class="bg-gray-600 text-white rounded-md px-3 py-2 w-full">
+          <option value="">Loading devices...</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="portInput" class="block mb-1 font-semibold">OSC Port</label>
+        <input type="number" id="portInput" class="bg-gray-600 text-white rounded-md px-3 py-2 w-full"
+          placeholder="Enter Port (e.g., 9000)" />
+      </div>
+
+      <div>
+        <label class="block mb-1 font-semibold">Legacy Mode</label>
+        <label class="inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="legacyToggle" class="sr-only peer" />
+          <div
+            class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:bg-accent transition-all duration-300">
+          </div>
+          <span class="ml-2 text-sm text-white">Enable Legacy Mode</span>
+        </label>
+      </div>
+
+      <!-- Gains -->
+      <div>
+        <label class="block font-semibold mb-1">Bass Gain</label>
+        <input type="range" id="bassGain" class="w-full accent-accent" min="1" max="5" step="0.1" value="1" />
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Low Gain</label>
+        <input type="range" id="lowGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Mid Gain</label>
+        <input type="range" id="midGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Treble Gain</label>
+        <input type="range" id="trebleGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+      </div>
+
+      <button id="toggleAudio"
+        class="tab-btn w-full py-2 rounded-lg bg-green-600 hover:bg-green-700 transition text-white">
+        Start Audio
+      </button>
+    </div>
+
+    <!-- Connect -->
+    <div id="connect" class="tab space-y-3 bg-gray-700 border border-gray-600 rounded-xl p-4 shadow-md text-white">
+      <h3 class="text-xl font-semibold mb-2">Spotify Integration</h3>
+      <button id="linkSpotify" class="tab-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">
+        Link Spotify
+      </button>
+      <div id="trackInfo" class="text-white mt-3"></div>
+      <label class="flex items-center mt-3 text-white">
+        <input class="mr-2" type="checkbox" id="liveTrackToggle" checked />
+        Enable Live Track Updates
+      </label>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+  <script>
+    // --- Tab switching ---
+    function openTab(tabId) {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
+    }
+
+    // --- THEME HANDLING ---
+    const themeSelect = document.getElementById("themeSelect");
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    applyTheme(savedTheme);
+    themeSelect.value = savedTheme;
+
+    themeSelect.addEventListener("change", (e) => {
+      const theme = e.target.value;
+      applyTheme(theme);
+      localStorage.setItem("theme", theme);
+    });
+
+    function applyTheme(theme) {
+      // Reset
+      document.documentElement.classList.remove("dark");
+      document.body.className =
+        "min-h-screen transition-colors duration-300 p-4 text-gray-100";
+
+      switch (theme) {
+        case "light":
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-gray-100 text-gray-900";
+          resetTabs(); // remove any rainbow or previous theme styles
+
+          // Update tab buttons for light theme
+          document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.style.color = "#f9fafb";       // light text color
+            btn.style.backgroundColor = "#4b5563"; // keep dark button bg for contrast
+          });
+          break;
+
+        case "dark":
+          document.documentElement.classList.add("dark");
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-gray-900 text-gray-100";
+          resetTabs();
+          break;
+
+        case "neon":
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-black text-neon";
+          resetTabs();
+          break;
+
+        case "rainbow":
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-black text-white";
+          document.querySelectorAll(".tab").forEach(tab => tab.classList.add("rainbow-border"));
+          document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.classList.add("rainbow-border", "rainbow-text");
+            btn.style.backgroundColor = ""; // reset in case previous theme set it
+            btn.style.color = "";
+          });
+          break;
+
+        case "pink":
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-black text-white";
+          resetTabs();
+          document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.style.backgroundColor = "#9b005f"; // darker pink
+            btn.style.color = "#fff";
+          });
+          break;
+
+        case "green":
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-black text-white";
+          resetTabs();
+          document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.style.backgroundColor = "#007a3a"; // darker green
+            btn.style.color = "#fff";
+          });
+          break;
+
+        default:
+          document.body.className = "min-h-screen transition-colors duration-300 p-4 bg-gray-900 text-gray-100";
+          resetTabs();
       }
+    }
 
-      // --- THEME HANDLING ---
-      const themeSelect = document.getElementById("themeSelect");
-      const savedTheme = localStorage.getItem("theme") || "dark";
-      applyTheme(savedTheme);
-      themeSelect.value = savedTheme;
-
-      themeSelect.addEventListener("change", (e) => {
-        const theme = e.target.value;
-        applyTheme(theme);
-        localStorage.setItem("theme", theme);
+    function resetTabs() {
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("rainbow-border"));
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.remove("rainbow-border", "rainbow-text");
+        btn.style.backgroundColor = ""; // reset any inline background
+        btn.style.color = ""; // reset inline color
       });
+    }
 
-      function applyTheme(theme) {
-        // Reset
-        document.documentElement.classList.remove("dark");
-        document.body.className =
-          "min-h-screen transition-colors duration-300 p-4 text-gray-100";
-        document.body.classList.remove("rainbow-bg");
+    // --- Legacy toggle save ---
+    const legacyToggle = document.getElementById("legacyToggle");
+    legacyToggle.checked = JSON.parse(localStorage.getItem("legacyMode") || "false");
+    legacyToggle.addEventListener("change", () => {
+      localStorage.setItem("legacyMode", legacyToggle.checked);
+    });
 
-        switch (theme) {
-          case "light":
-            document.body.classList.add("bg-gray-100", "text-gray-900");
-            break;
-          case "dark":
-            document.documentElement.classList.add("dark");
-            document.body.classList.add("bg-gray-900", "text-gray-100");
-            break;
-          case "neon":
-            document.body.classList.add("bg-black", "text-neon");
-            break;
-          case "rainbow":
-            document.body.classList.add("rainbow-bg", "text-white");
-            break;
-          case "pink":
-            document.body.classList.add("bg-pinky", "text-white");
-            break;
-          case "green":
-            document.body.classList.add("bg-greeny", "text-black");
-            break;
-          default:
-            document.body.classList.add("bg-gray-900", "text-gray-100");
-        }
+    // --- Save selected audio device ---
+    const audioSelect = document.getElementById("audioDeviceSelect");
+    audioSelect.addEventListener("change", () => {
+      localStorage.setItem("selectedAudioDevice", audioSelect.value);
+    });
+
+    // --- Restore saved audio device ---
+    window.addEventListener("load", async () => {
+      await new Promise((r) => setTimeout(r, 500));
+      const savedDevice = localStorage.getItem("selectedAudioDevice");
+      if (savedDevice) {
+        const opt = [...audioSelect.options].find(o => o.value === savedDevice);
+        if (opt) audioSelect.value = savedDevice;
       }
+    });
 
-      // --- Legacy toggle save ---
-      const legacyToggle = document.getElementById("legacyToggle");
-      legacyToggle.checked = JSON.parse(localStorage.getItem("legacyMode") || "false");
-      legacyToggle.addEventListener("change", () => {
-        localStorage.setItem("legacyMode", legacyToggle.checked);
-      });
+    /*document.getElementById('linkSpotify').addEventListener('click', () => {
+      window.open('http://yourserver.com/authorize', '_blank'); // Open the authorization link
+    });*/
 
-      // --- Save selected audio device ---
-      const audioSelect = document.getElementById("audioDeviceSelect");
-      audioSelect.addEventListener("change", () => {
-        localStorage.setItem("selectedAudioDevice", audioSelect.value);
-      });
+    // Listen for the tokens from your server (use IPC or another method for receiving tokens)
+    /*window.electronAPI.receiveTokens((event, tokens) => {
+      localStorage.setItem('spotify_access_token', tokens.accessToken);
+      localStorage.setItem('spotify_refresh_token', tokens.refreshToken);
+    });*/
 
-      // --- Restore saved audio device ---
-      window.addEventListener("load", async () => {
-        await new Promise((r) => setTimeout(r, 500));
-        const savedDevice = localStorage.getItem("selectedAudioDevice");
-        if (savedDevice) {
-          const opt = [...audioSelect.options].find(o => o.value === savedDevice);
-          if (opt) audioSelect.value = savedDevice;
-        }
-      });
+    // Display track info
+    /*window.electronAPI.updateTrackInfo((event, trackInfo) => {
+      document.getElementById('trackInfo').innerText = trackInfo
+         ? `Now Playing: ${trackInfo.artist} - ${trackInfo.title}`
+          : 'No track currently playing';
+    });*/
+  </script>
+</body>
 
-      /*document.getElementById('linkSpotify').addEventListener('click', () => {
-        window.open('http://yourserver.com/authorize', '_blank'); // Open the authorization link
-      });*/
-
-      // Listen for the tokens from your server (use IPC or another method for receiving tokens)
-      /*window.electronAPI.receiveTokens((event, tokens) => {
-        localStorage.setItem('spotify_access_token', tokens.accessToken);
-        localStorage.setItem('spotify_refresh_token', tokens.refreshToken);
-      });*/
-
-        // Display track info
-      /*window.electronAPI.updateTrackInfo((event, trackInfo) => {
-        document.getElementById('trackInfo').innerText = trackInfo
-           ? `Now Playing: ${trackInfo.artist} - ${trackInfo.title}`
-            : 'No track currently playing';
-      });*/
-    </script>
-  </body>
 </html>
