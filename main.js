@@ -16,7 +16,7 @@ function createWindow() {
         width: 800,
         height: 600,
         webPreferences: {
-            contextIsolation: true,
+            contextIsolation: false,
             nodeIntegration: true,
             preload: path.join(__dirname, 'preload.js'),
             backgroundThrottling: false // Keep the app running when in the background

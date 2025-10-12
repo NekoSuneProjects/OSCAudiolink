@@ -138,20 +138,20 @@ function calculateLevels(dataArray) {
         let normalizedLevel;
         switch (band) {
             case 'bass':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * bass, 0.6) / 100, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.bass, 0.6) / 100, 0), 1);
                 break;
             case 'low':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * low, 0.6) / 150, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.low, 0.6) / 150, 0), 1);
                 break;
             case 'mid':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * mid, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.mid, 0.5) / 200, 0), 1);
                 break;
             case 'treble':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * treble, 0.5) / 200, 0), 1);
+                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.treble, 0.5) / 200, 0), 1);
                 break;
         }
 
-        const threshold = thresholds[Object.keys(frequencyBands).indexOf(band)];
+        const threshold = audioLinkSettings.thresholds[Object.keys(frequencyBands).indexOf(band)];
         normalizedLevel = (normalizedLevel > threshold) ? (normalizedLevel - threshold) / (1 - threshold) : 0;
 
         levels.push(Math.min(normalizedLevel, 1));
@@ -163,7 +163,7 @@ function calculateLevels(dataArray) {
 // Send OSC messages for VRChat
 function sendOsc(levels, legacy) {
      let parameters 
-     if (legacy == true) { 
+     if (legacy) { 
          parameters = [
             "/avatar/parameters/HUE",
             "/avatar/parameters/Low",
@@ -219,12 +219,12 @@ function updateWaveform(levels) {
 document.getElementById('portInput').addEventListener('change', (event) => {
     const newPort = parseInt(event.target.value, 10);
     if (!isNaN(newPort)) {
-        ipcRenderer.send('updateOscPort', newPort); // Update main process
+        window.electronAPI.updateOscPort(newPort); // Update main process
     }
 });
 
 async function loadSettings() {
-    const oscPort = await ipcRenderer.invoke('getOscPort');
+    const oscPort = await window.electronAPI.getOscPort();
     document.getElementById('portInput').value = oscPort;
 }
 

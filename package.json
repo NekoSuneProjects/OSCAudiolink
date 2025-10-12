@@ -4,6 +4,7 @@
   "main": "main.js",
   "bin": "main.js",
   "scripts": {
+    "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"

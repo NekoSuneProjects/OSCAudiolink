@@ -1,11 +1,11 @@
 // preload.js
-const { contextBridge, ipcRenderer } = require("electron");
+const { ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("electronAPI", {
+// Directly expose to window (since contextIsolation = false)
+window.electronAPI = {
   sendToMain: (channel, data) => ipcRenderer.send(channel, data),
-  receiveFromMain: (channel, func) =>
-    ipcRenderer.on(channel, (event, ...args) => func(...args)),
+  receiveFromMain: (channel, func) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
   getOscPort: () => ipcRenderer.invoke('getOscPort'),
-    updateOscPort: (newPort) => ipcRenderer.send('updateOscPort', newPort),
-    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
-});
+  updateOscPort: (newPort) => ipcRenderer.send('updateOscPort', newPort),
+  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
+};
