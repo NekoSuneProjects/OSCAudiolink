@@ -162,22 +162,17 @@ function calculateLevels(dataArray) {
 
 // Send OSC messages for VRChat
 function sendOsc(levels, legacy) {
-     let parameters 
-     if (legacy) { 
-         parameters = [
-            "/avatar/parameters/HUE",
-            "/avatar/parameters/Low",
-            "/avatar/parameters/Mid",
-            "/avatar/parameters/Treble"
-        ];
-     } else {
-         parameters = [
-            "/avatar/parameters/VRCOSC/NekosAudiolink/Bass",
-            "/avatar/parameters/VRCOSC/NekosAudiolink/Low",
-            "/avatar/parameters/VRCOSC/NekosAudiolink/Mid",
-            "/avatar/parameters/VRCOSC/NekosAudiolink/Treble"
-        ];
-     }
+    let parameters
+    parameters = [
+        "/avatar/parameters/HUE",
+        "/avatar/parameters/Low",
+        "/avatar/parameters/Mid",
+        "/avatar/parameters/Treble",
+        "/avatar/parameters/VRCOSC/NekosAudiolink/Bass",
+        "/avatar/parameters/VRCOSC/NekosAudiolink/Low",
+        "/avatar/parameters/VRCOSC/NekosAudiolink/Mid",
+        "/avatar/parameters/VRCOSC/NekosAudiolink/Treble"
+    ];
 
     levels.forEach((level, i) => {
         const formattedLevel = parseFloat(level.toFixed(2));
