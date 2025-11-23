@@ -164,14 +164,10 @@ function calculateLevels(dataArray) {
 function sendOsc(levels, legacy) {
     let parameters
     parameters = [
-        "/avatar/parameters/HUE",
-        "/avatar/parameters/Low",
-        "/avatar/parameters/Mid",
-        "/avatar/parameters/Treble",
-        "/avatar/parameters/VRCOSC/NekosAudiolink/Bass",
-        "/avatar/parameters/VRCOSC/NekosAudiolink/Low",
-        "/avatar/parameters/VRCOSC/NekosAudiolink/Mid",
-        "/avatar/parameters/VRCOSC/NekosAudiolink/Treble"
+        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Bass",
+        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Low",
+        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Mid",
+        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Treble"
     ];
 
     levels.forEach((level, i) => {
