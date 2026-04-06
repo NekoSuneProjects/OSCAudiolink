@@ -56,7 +56,7 @@ jobs:
             $channel = "beta"
 
             $tag = "BETA-${{ github.run_number }}"
-            $version = "$($env:BASE_VERSION)-${{ github.run_number }}"
+            $version = "$($env:BASE_VERSION)-beta-${{ github.run_number }}"
             $name = "OSCAudioLink BETA V$($env:BASE_VERSION)-${{ github.run_number }}"
             $prerelease = "true"
           }
@@ -105,7 +105,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          name: OSCAudioLink ${{ env.VERSION }}
+          name: ${{ env.RELEASE_NAME }}
           prerelease: ${{ env.PRERELEASE == 'true' }}
           body: |
             ${{ steps.notes.outputs.body }}
