@@ -2,18 +2,17 @@ name: Windows Build & Release
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 on:
   push:
     branches:
-      - main
+      - RELEASE
+      - BETA
 
 jobs:
-  build-and-upload-windows:
-    if: github.event.pull_request.merged == true || github.event_name == 'push'
+  build-and-release:
     runs-on: windows-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -22,95 +21,109 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 21
-          cache: 'npm'
+          cache: npm
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Get Version from package.json
-        id: get_version
+      # ✅ ALWAYS pull 1.0.0 from package.json
+      - name: Get Base Version from package.json
         shell: pwsh
         run: |
-          $version = (node -p 'require("./package.json").version')
-          Write-Host "Extracted version: $version"
-          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+          $base = (node -p "require('./package.json').version")
+          Write-Host "Base version from package.json: $base"
+          Add-Content -Path $env:GITHUB_ENV -Value "BASE_VERSION=$base"
 
-      - name: Set Build Tag
+      - name: Determine Channel + Final Version
         shell: pwsh
         run: |
-          $testBuildTag = "-v${{ github.run_number }}"
-          Write-Host "Build Tag: $testBuildTag"
-          Add-Content -Path $env:GITHUB_ENV -Value "BUILD_TAG=$testBuildTag"
-      
+          $branch = "${{ github.ref_name }}"
+          $base = "${{ env.BASE_VERSION }}"
+
+          if ($branch -eq "BETA") {
+            $channel = "beta"
+            $version = "$base-beta-${{ github.run_number }}"
+            $prerelease = "true"
+          }
+          else {
+            $channel = "release"
+            $version = $base
+            $prerelease = "false"
+          }
+
+          Write-Host "Branch: $branch"
+          Write-Host "Channel: $channel"
+          Write-Host "Version: $version"
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CHANNEL=$channel"
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+          Add-Content -Path $env:GITHUB_ENV -Value "TAG=$version"
+          Add-Content -Path $env:GITHUB_ENV -Value "PRERELEASE=$prerelease"
+
       - name: Build Electron App
-        run: |
-          npm run build:win
+        run: npm run build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: List dist folder
-        run: Get-ChildItem -Recurse dist
-        shell: pwsh
-
       - name: Generate Release Notes
-        id: generate_release_notes
+        id: notes
         uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           version: ${{ env.VERSION }}
           name: "OSCAudioLink ${{ env.VERSION }}"
-          tag: ${{ env.VERSION }}
-          prerelease: true
-          header: "## Release Notes for OSCAudioLink ${{ env.VERSION }}"
+          tag: ${{ env.TAG }}
+          prerelease: ${{ env.PRERELEASE == 'true' }}
 
       - name: Save Release Notes
+        shell: pwsh
         run: |
-          echo "${{ steps.generate_release_notes.outputs.body }}" > release_notes.txt
-          
-      - name: Install mc (MinIO Client) on Windows
-        shell: powershell
-        run: |
-          Invoke-WebRequest -Uri "https://dl.min.io/client/mc/release/windows-amd64/mc.exe" -OutFile "mc.exe"
-        
-      - name: Configure mc alias (Windows)
-        shell: powershell
-        run: |
-          .\mc.exe alias set myminio "${{ secrets.MINIO_ENDPOINT }}" "${{ secrets.AWS_ACCESS_KEY }}" "${{ secrets.AWS_SECRET_KEY }}"
-        
-      - name: Upload MSI and EXE Installers
-        shell: powershell
-        run: |
-          $targetPath = "myminio/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/"
-          .\mc.exe cp "dist/OSCAudioLink-Setup-${{ env.VERSION }}.msi" "$targetPath"
-          .\mc.exe cp "dist/OSCAudioLink-Setup-${{ env.VERSION }}.exe" "$targetPath"
-        
-      - name: Upload Release Notes to MinIO
-        shell: powershell
-        run: |
-          .\mc.exe cp release_notes.txt myminio/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/release_notes.txt
+          Set-Content -Path release_notes.txt -Value "${{ steps.notes.outputs.body }}"
 
-      - name: Send Release Info to Discord
+      - name: Create GitHub Release + Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: OSCAudioLink ${{ env.VERSION }}
+          prerelease: ${{ env.PRERELEASE == 'true' }}
+          body: |
+            ${{ steps.notes.outputs.body }}
+
+            **EXE Installer**
+            https://github.com/NekoSuneProjects/OSCAudiolink/releases/download/${{ env.TAG }}/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.exe
+
+            **MSI Installer**
+            https://github.com/NekoSuneProjects/OSCAudiolink/releases/download/${{ env.TAG }}/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.msi
+          files: |
+            dist/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.exe
+            dist/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Discord Notification
         shell: pwsh
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          $releaseNotes = Get-Content release_notes.txt -Raw
-          $jsonPayload = @{
+          $notes = Get-Content release_notes.txt -Raw
+
+          $exeUrl = "https://github.com/NekoSuneProjects/OSCAudiolink/releases/download/${{ env.TAG }}/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.exe"
+          $msiUrl = "https://github.com/NekoSuneProjects/OSCAudiolink/releases/download/${{ env.TAG }}/OSCAudioLink-Setup-${{ env.BASE_VERSION }}.msi"
+
+          $downloadBlock = "**EXE Installer**`n$exeUrl`n`n**MSI Installer**`n$msiUrl"
+
+          $json = @{
             username = "OSCAudioLink Bot"
-            avatar_url = "https://cdn.discordapp.com/icons/1274732053337870417/8f0b3c1852bbd3cc11a237c2d326dcb1.webp?size=1024"
-            content = "<@&1384262560395559122> **UPDATE (WINDOWS)**"
+            content = "<@&1384262560395559122> **UPDATE ($($env:CHANNEL.ToUpper()))**"
             embeds = @(
               @{
-                title = "New Release: v${{ env.VERSION }}${{ env.BUILD_TAG }}"
-                description = "$releaseNotes`n`n[Download EXE FILE](https://uploadminioger1.nekosunevr.co.uk/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.exe) | [Download MSI FILE](https://uploadminioger1.nekosunevr.co.uk/nekosunetools/oscaudiolink/release/${{ env.VERSION }}${{ env.BUILD_TAG }}/OSCAudioLink-Setup-${{ env.VERSION }}.msi)"
-                color = 16776960
-                footer = @{
-                  text = "Released by GitHub Actions"
-                }
+                title = "OSCAudioLink $env:VERSION"
+                description = "$notes`n`n$downloadBlock"
+                color = if ($env:CHANNEL -eq "beta") { 16750848 } else { 16776960 }
                 timestamp = (Get-Date).ToString("o")
               }
             )
           } | ConvertTo-Json -Depth 10
 
-          Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType 'application/json' -Body $jsonPayload
+          Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType 'application/json' -Body $json
