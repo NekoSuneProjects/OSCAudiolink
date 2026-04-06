@@ -20,11 +20,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 21
+          node-version: 20
           cache: npm
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Setup Python (fix node-gyp)
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10
+
+      - name: Clean Install
+        shell: pwsh
+        run: |
+          npm cache clean --force
+          if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force }
+          if (Test-Path package-lock.json) { Remove-Item package-lock.json -Force }
+          npm install
 
       # ✅ ALWAYS pull 1.0.0 from package.json
       - name: Get Base Version from package.json
