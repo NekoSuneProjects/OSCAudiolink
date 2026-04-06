@@ -49,30 +49,35 @@ jobs:
           Write-Host "Base version from package.json: $base"
           Add-Content -Path $env:GITHUB_ENV -Value "BASE_VERSION=$base"
 
-      - name: Determine Channel + Final Version
+      - name: Determine Channel + Version
         shell: pwsh
         run: |
-          $branch = "${{ github.ref_name }}"
-          $base = "${{ env.BASE_VERSION }}"
-
-          if ($branch -eq "BETA") {
+          if ("${{ github.ref_name }}" -eq "BETA") {
             $channel = "beta"
-            $version = "$base-beta-${{ github.run_number }}"
+
+            $tag = "BETA-${{ github.run_number }}"
+            $version = "$($env:BASE_VERSION)-${{ github.run_number }}"
+            $name = "OSCAudioLink BETA V$($env:BASE_VERSION)-${{ github.run_number }}"
             $prerelease = "true"
           }
           else {
             $channel = "release"
-            $version = $base
+
+            $tag = $env:BASE_VERSION
+            $version = $env:BASE_VERSION
+            $name = "OSCAudioLink $($env:BASE_VERSION)"
             $prerelease = "false"
           }
 
-          Write-Host "Branch: $branch"
           Write-Host "Channel: $channel"
+          Write-Host "Tag: $tag"
           Write-Host "Version: $version"
+          Write-Host "Name: $name"
 
           Add-Content -Path $env:GITHUB_ENV -Value "CHANNEL=$channel"
+          Add-Content -Path $env:GITHUB_ENV -Value "TAG=$tag"
           Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
-          Add-Content -Path $env:GITHUB_ENV -Value "TAG=$version"
+          Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_NAME=$name"
           Add-Content -Path $env:GITHUB_ENV -Value "PRERELEASE=$prerelease"
 
       - name: Build Electron App
@@ -87,8 +92,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           version: ${{ env.VERSION }}
-          name: "OSCAudioLink ${{ env.VERSION }}"
-          tag: ${{ env.TAG }}
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.RELEASE_NAME }}
           prerelease: ${{ env.PRERELEASE == 'true' }}
 
       - name: Save Release Notes
