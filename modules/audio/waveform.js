@@ -1,52 +1,66 @@
-function calculateLevels(dataArray) {
-    const sampleRate = 44100;
+function calculateLevels(dataArray, sampleRate) {
+    const fftLength = 2048;
+    const binSize = sampleRate / fftLength;
+    
     const frequencyBands = {
-        bass: [20, 300],    // Extended bass range for improved sensitivity
-        low: [300, 500],
-        mid: [500, 4000],
-        treble: [4000, 15000]
+        low: [20, 120],
+        bass: [120, 250],
+        mid: [250, 4000],
+        treble: [4000, 20000]
     };
 
     // Get gain values from sliders
-    const bassGain = parseFloat(document.getElementById('bassGain').value || 3.0); // Boost bass by default
-    const lowGain = parseFloat(document.getElementById('lowGain').value || 1);
-    const midGain = parseFloat(document.getElementById('midGain').value || 1);
-    const trebleGain = parseFloat(document.getElementById('trebleGain').value || 1);
+    const gain = parseFloat(document.getElementById('gainSlider').value || 2.0);
+    const lowBoostSlider = parseFloat(document.getElementById('lowBoostSlider').value || 2.6);
+    const bassBoostSlider = parseFloat(document.getElementById('bassBoostSlider').value || 3.0);
+    const midBoostSlider = parseFloat(document.getElementById('midBoostSlider').value || 2.0);
+    const trebleBoostSlider = parseFloat(document.getElementById('trebleBoostSlider').value || 3.4);
+
+    // Scale boosts like in the reference
+    const lowBoost = Math.round(lowBoostSlider / 10 * 50);
+    const bassBoost = Math.round(bassBoostSlider / 10 * 100);
+    const midBoost = Math.round(midBoostSlider / 10 * 1000);
+    const trebleBoost = Math.round(trebleBoostSlider / 10 * 1000);
+
+    const volumeBoost = 8.0;
 
     const levels = [];
 
-    function getIndex(freq) {
-        return Math.floor((dataArray.length * freq) / sampleRate);
-    }
-
     for (const [band, [lowFreq, highFreq]] of Object.entries(frequencyBands)) {
-        const lowIndex = getIndex(lowFreq);
-        const highIndex = getIndex(highFreq);
-        const bandPower = dataArray.slice(lowIndex, highIndex).reduce((acc, val) => acc + val, 0);
+        let energy = 0;
+        let bins = 0;
 
-        // Adjust the normalization and apply gain to improve bass sensitivity
-        let normalizedLevel;
-        if (band === 'bass') {
-            // Apply a different normalization for bass to make it more sensitive
-            normalizedLevel = Math.min(Math.max(Math.pow(bandPower, 0.6) / 150, 0), 1); 
-            normalizedLevel *= bassGain; // Boost bass with additional gain
-        } else {
-            // Use default normalization for other bands
-            normalizedLevel = Math.min(Math.max(Math.pow(bandPower, 0.5) / 200, 0), 1);
-            switch (band) {
-                case 'low':
-                    normalizedLevel *= lowGain;
-                    break;
-                case 'mid':
-                    normalizedLevel *= midGain;
-                    break;
-                case 'treble':
-                    normalizedLevel *= trebleGain;
-                    break;
+        for (let i = 1; i < fftLength / 2; i++) {
+            const frequency = i * binSize;
+            if (frequency >= lowFreq && frequency < highFreq) {
+                const magnitude = Math.pow(10, dataArray[i] / 20); // Convert dB to magnitude
+                energy += magnitude;
+                bins++;
             }
         }
 
-        levels.push(Math.min(normalizedLevel, 1)); // Cap each level at 1
+        let normalizedLevel = 0;
+        if (bins > 0) {
+            let boost = 1;
+            switch (band) {
+                case 'low':
+                    boost = lowBoost;
+                    break;
+                case 'bass':
+                    boost = bassBoost;
+                    break;
+                case 'mid':
+                    boost = midBoost;
+                    break;
+                case 'treble':
+                    boost = trebleBoost;
+                    break;
+            }
+            normalizedLevel = (energy / bins) * boost * gain * volumeBoost;
+            normalizedLevel = Math.max(0, Math.min(1, normalizedLevel));
+        }
+
+        levels.push(normalizedLevel);
     }
 
     return levels;
@@ -57,7 +71,7 @@ function updateWaveform(levels) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const colors = ['red', 'green', 'blue', 'purple'];
+    const colors = ['red', 'green', 'blue', 'purple']; // Low, Bass, Mid, Treble
     levels.forEach((level, i) => {
         ctx.fillStyle = colors[i];
         ctx.fillRect(i * (canvas.width / 4), canvas.height - level * canvas.height, canvas.width / 4 - 10, level * canvas.height);

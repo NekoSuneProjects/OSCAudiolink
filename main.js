@@ -5,7 +5,6 @@ const path = require('path');
 
 const {
     updateOscMappings,
-    sendOscMessage,
 } = require('./modules/vrchatosc/oscModule');
 
 let mainWindow;
@@ -85,6 +84,15 @@ ipcMain.on('setAvatarParam', (event, param, value) => {
 ipcMain.handle('getOscPort', (event) => {
     // Retrieve oscPort from settings or default if not set
     return settings.get('oscPort', 9000); // Default to 9000 if not set
+});
+
+ipcMain.handle('getSetting', (event, key, defaultValue) => {
+    return settings.get(key, defaultValue);
+});
+
+ipcMain.handle('saveSetting', (event, key, value) => {
+    settings.set(key, value);
+    return value;
 });
 
 // Similarly, set handlers for saving or retrieving other configurations

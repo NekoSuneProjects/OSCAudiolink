@@ -1,222 +1,212 @@
-const { ipcRenderer } = require('electron');
-const dgram = require('dgram');
-const math = require('mathjs');
+﻿const { loadAudioDevices, setupAudioAnalysis, stopAudioAnalysis } = require('./modules/audio/audioModule')
+const { setOscPort, sendOsc, sendBeat, startOscReceiver, stopOscReceiver } = require('./modules/vrchatosc/oscModule')
 
-let audioContext;
-let analyser;
-let source;
-let stream;
-let isAnalyzing = false;
-let oscPort = 9000;
-const oscClient = dgram.createSocket('udp4');
+let isAnalyzing = false
+let receiverPort = 9001
+let oscReceiveEnabled = false
+let oscHistory = []
+const maxHistory = 100
+let beatState = false
 
-// AudioLink-inspired settings
-const audioLinkSettings = {
-    gain: 1.0,
-    bass: 1.5,       // Increased gain for bass
-    low: 1.2,        // Increased gain for low
-    mid: 1.0,
-    treble: 1.0,
-    legancy: false,
-    thresholds: [0.35, 0.35, 0.45, 0.45], // Lowered thresholds for bass and low
-    crossovers: [0.0, 0.25, 0.5, 0.75],
-    fadeLength: 0.25,
-    fadeExpFalloff: 0.75,
-};
-
-async function loadAudioDevices() {
-    const audioSelect = document.getElementById('audioDeviceSelect');
-    audioSelect.innerHTML = '';
-
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
-
-        audioInputDevices.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.text = device.label || 'Microphone ' + (audioSelect.length + 1);
-            audioSelect.appendChild(option);
-        });
-
-        if (audioInputDevices.length === 0) {
-            const noDevicesOption = document.createElement('option');
-            noDevicesOption.value = '';
-            noDevicesOption.text = 'No audio input devices found';
-            audioSelect.appendChild(noDevicesOption);
-        }
-    } catch (error) {
-        console.error('Error loading audio devices:', error);
-    }
+async function initApp () {
+  await loadAudioDevices()
+  await loadSettings()
 }
 
-loadAudioDevices();
+function handleAudioLevels (levels) {
+  oscHistory.push([...levels])
+  if (oscHistory.length > maxHistory) oscHistory.shift()
+  updateOscGraph()
 
-document.getElementById('toggleAudio').addEventListener('click', async () => {
-    if (isAnalyzing) {
-        stopAudioAnalysis();
-    } else {
-        const selectedDeviceId = document.getElementById('audioDeviceSelect').value;
-        oscPort = document.getElementById('portInput').value || 9000;
-        if (selectedDeviceId) {
-            await setupAudioAnalysis(selectedDeviceId);
-        } else {
-            alert('Please select an audio input device.');
-        }
-    }
-});
+  const volume = levels.reduce((sum, value) => sum + value, 0) / levels.length
+  const peak = Math.max(...levels)
+  updateOscLog(levels, volume, peak)
 
-async function setupAudioAnalysis(deviceId) {
-    if (audioContext) {
-        stopAudioAnalysis();
-    }
+  const newBeat = peak > 0.65
+  if (newBeat !== beatState) {
+    beatState = newBeat
+    sendBeat(beatState ? 1 : 0)
+  }
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = audioLinkSettings.fadeExpFalloff;
-
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
-    source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-
-    isAnalyzing = true;
-    document.getElementById('toggleAudio').textContent = 'Stop Audio';
-
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    function visualize() {
-        if (!isAnalyzing) return;
-
-        analyser.getByteFrequencyData(dataArray);
-        const levels = calculateLevels(dataArray);
-        updateWaveform(levels);
-
-        sendOsc(levels, audioLinkSettings.legancy);
-
-        requestAnimationFrame(visualize);
-    }
-
-    visualize();
+  sendOsc(levels)
 }
 
-function stopAudioAnalysis() {
-    if (source) {
-        source.disconnect();
-    }
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    if (audioContext) {
-        audioContext.close();
-    }
-    isAnalyzing = false;
-    document.getElementById('toggleAudio').textContent = 'Start Audio';
+async function initAudio () {
+  const audioSelect = document.getElementById('audioDeviceSelect')
+  const selectedDeviceId = audioSelect.value
+  const selectedKind = audioSelect.selectedOptions[0]?.dataset.kind
+  const portValue = parseInt(document.getElementById('portInput').value, 10)
+
+  if (!selectedDeviceId) {
+    alert('Please select an audio input device.')
+    return
+  }
+
+  if (selectedKind === 'audiooutput') {
+    alert('Playback devices cannot be used for getUserMedia capture. Please select a microphone input device.')
+    return
+  }
+
+  await window.electronAPI.saveSetting('selectedAudioDevice', selectedDeviceId)
+  await setupAudioAnalysis(selectedDeviceId, {
+    onLevels: handleAudioLevels,
+    onError: err => alert('Audio failed: ' + err.message)
+  })
+
+  isAnalyzing = true
+  document.getElementById('toggleAudio').textContent = 'Stop Audio'
+  if (!isNaN(portValue)) {
+    setOscPort(portValue)
+  }
 }
 
-function calculateLevels(dataArray) {
-    const sampleRate = 44100;
-    const frequencyBands = {
-        bass: [20, 150],
-        low: [150, 500],
-        mid: [500, 4000],
-        treble: [4000, 15000]
-    };
+async function loadSettings () {
+  const storedOscPort = await window.electronAPI.getSetting('oscPort', 9000)
+  const storedGain = await window.electronAPI.getSetting('gain', 2.0)
+  const storedLowBoost = await window.electronAPI.getSetting('lowBoost', 2.6)
+  const storedBassBoost = await window.electronAPI.getSetting('bassBoost', 3.0)
+  const storedMidBoost = await window.electronAPI.getSetting('midBoost', 2.0)
+  const storedTrebleBoost = await window.electronAPI.getSetting('trebleBoost', 3.4)
+  const storedReceiverPort = await window.electronAPI.getSetting('receiverPort', 9001)
+  const storedReceiveEnabled = await window.electronAPI.getSetting('receiveEnabled', false)
 
-    const levels = [];
+  document.getElementById('portInput').value = storedOscPort
+  setOscPort(storedOscPort)
 
-    function getIndex(freq) {
-        return Math.floor((dataArray.length * freq) / sampleRate);
+  document.getElementById('gainSlider').value = storedGain
+  document.getElementById('lowBoostSlider').value = storedLowBoost
+  document.getElementById('bassBoostSlider').value = storedBassBoost
+  document.getElementById('midBoostSlider').value = storedMidBoost
+  document.getElementById('trebleBoostSlider').value = storedTrebleBoost
+  document.getElementById('gainValue').textContent = storedGain
+  document.getElementById('lowBoostValue').textContent = storedLowBoost
+  document.getElementById('bassBoostValue').textContent = storedBassBoost
+  document.getElementById('midBoostValue').textContent = storedMidBoost
+  document.getElementById('trebleBoostValue').textContent = storedTrebleBoost
+
+  document.getElementById('receiverPortInput').value = storedReceiverPort
+  document.getElementById('enableReceive').checked = storedReceiveEnabled
+  receiverPort = storedReceiverPort
+  oscReceiveEnabled = storedReceiveEnabled
+
+  if (storedReceiveEnabled) {
+    startOscReceiver(receiverPort, (address, args) => updateOscLogIncoming(address, args))
+  }
+}
+
+function updateOscGraph () {
+  const canvas = document.getElementById('oscGraph')
+  if (!canvas) return
+
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  const colors = ['red', 'green', 'blue', 'purple']
+  const step = canvas.width / maxHistory
+
+  oscHistory.forEach((levels, i) => {
+    levels.forEach((level, j) => {
+      ctx.fillStyle = colors[j]
+      ctx.fillRect(i * step, canvas.height - level * canvas.height, step - 1, level * canvas.height)
+    })
+  })
+}
+
+function updateOscLog (levels, volume, peak) {
+  const logText = document.getElementById('oscLogText')
+  const timestamp = new Date().toLocaleTimeString()
+  const logEntry = `${timestamp} OUT - Low: ${levels[0].toFixed(2)}, Bass: ${levels[1].toFixed(2)}, Mid: ${levels[2].toFixed(2)}, Treble: ${levels[3].toFixed(2)}, Volume: ${volume.toFixed(2)}, Peak: ${peak.toFixed(2)}\n`
+  logText.value += logEntry
+  logText.scrollTop = logText.scrollHeight
+}
+
+function updateOscLogIncoming (address, args) {
+  const logText = document.getElementById('oscLogText')
+  const timestamp = new Date().toLocaleTimeString()
+  const argString = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(', ')
+  const logEntry = `${timestamp} IN  - ${address} ${argString}\n`
+  logText.value += logEntry
+  logText.scrollTop = logText.scrollHeight
+}
+
+function toggleAudio () {
+  const toggleButton = document.getElementById('toggleAudio')
+  if (isAnalyzing) {
+    stopAudioAnalysis()
+    isAnalyzing = false
+    toggleButton.textContent = 'Start Audio'
+    return
+  }
+
+  initAudio()
+}
+
+initApp()
+
+document.getElementById('toggleAudio').addEventListener('click', toggleAudio)
+
+document.getElementById('portInput').addEventListener('change', async event => {
+  const newPort = parseInt(event.target.value, 10)
+  if (!isNaN(newPort)) {
+    setOscPort(newPort)
+    await window.electronAPI.saveSetting('oscPort', newPort)
+    window.electronAPI.updateOscPort(newPort)
+  }
+})
+
+document.getElementById('receiverPortInput').addEventListener('change', async e => {
+  const newPort = parseInt(e.target.value, 10)
+  if (!isNaN(newPort)) {
+    receiverPort = newPort
+    await window.electronAPI.saveSetting('receiverPort', newPort)
+    if (oscReceiveEnabled) {
+      stopOscReceiver()
+      startOscReceiver(receiverPort, (address, args) => updateOscLogIncoming(address, args))
     }
+  }
+})
 
-    for (const [band, [lowFreq, highFreq]] of Object.entries(frequencyBands)) {
-        const lowIndex = getIndex(lowFreq);
-        const highIndex = getIndex(highFreq);
-        const bandPower = dataArray.slice(lowIndex, highIndex).reduce((acc, val) => acc + val, 0);
+document.getElementById('enableReceive').addEventListener('change', async e => {
+  oscReceiveEnabled = e.target.checked
+  await window.electronAPI.saveSetting('receiveEnabled', oscReceiveEnabled)
+  if (oscReceiveEnabled) {
+    startOscReceiver(receiverPort, (address, args) => updateOscLogIncoming(address, args))
+  } else {
+    stopOscReceiver()
+  }
+})
 
-        // Apply gain and normalize based on AudioLink-like settings
-        let normalizedLevel;
-        switch (band) {
-            case 'bass':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.bass, 0.6) / 100, 0), 1);
-                break;
-            case 'low':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.low, 0.6) / 150, 0), 1);
-                break;
-            case 'mid':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.mid, 0.5) / 200, 0), 1);
-                break;
-            case 'treble':
-                normalizedLevel = Math.min(Math.max(Math.pow(bandPower * audioLinkSettings.treble, 0.5) / 200, 0), 1);
-                break;
-        }
+document.getElementById('gainSlider').addEventListener('input', async e => {
+  document.getElementById('gainValue').textContent = e.target.value
+  await window.electronAPI.saveSetting('gain', parseFloat(e.target.value))
+})
 
-        const threshold = audioLinkSettings.thresholds[Object.keys(frequencyBands).indexOf(band)];
-        normalizedLevel = (normalizedLevel > threshold) ? (normalizedLevel - threshold) / (1 - threshold) : 0;
+document.getElementById('lowBoostSlider').addEventListener('input', async e => {
+  document.getElementById('lowBoostValue').textContent = e.target.value
+  await window.electronAPI.saveSetting('lowBoost', parseFloat(e.target.value))
+})
 
-        levels.push(Math.min(normalizedLevel, 1));
-    }
+document.getElementById('bassBoostSlider').addEventListener('input', async e => {
+  document.getElementById('bassBoostValue').textContent = e.target.value
+  await window.electronAPI.saveSetting('bassBoost', parseFloat(e.target.value))
+})
 
-    return levels;
-}
+document.getElementById('midBoostSlider').addEventListener('input', async e => {
+  document.getElementById('midBoostValue').textContent = e.target.value
+  await window.electronAPI.saveSetting('midBoost', parseFloat(e.target.value))
+})
 
-// Send OSC messages for VRChat
-function sendOsc(levels, legacy) {
-    let parameters
-    parameters = [
-        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Bass",
-        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Low",
-        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Mid",
-        "/avatar/parameters/VRCOSC/NekoSuneApps/Audiolink/Treble"
-    ];
+document.getElementById('trebleBoostSlider').addEventListener('input', async e => {
+  document.getElementById('trebleBoostValue').textContent = e.target.value
+  await window.electronAPI.saveSetting('trebleBoost', parseFloat(e.target.value))
+})
 
-    levels.forEach((level, i) => {
-        const formattedLevel = parseFloat(level.toFixed(2));
-        const buffer = createOscMessage(parameters[i], formattedLevel);
+document.getElementById('audioDeviceSelect').addEventListener('change', async e => {
+  await window.electronAPI.saveSetting('selectedAudioDevice', e.target.value)
+})
 
-        console.log(`Sending OSC message - Address: ${parameters[i]}, Value: ${formattedLevel}`);
-
-        oscClient.send(buffer, oscPort, '127.0.0.1', (error) => {
-            if (error) console.error('OSC Error:', error);
-        });
-    });
-}
-
-// Helper function to create OSC message buffer for a float value
-function createOscMessage(address, value) {
-    const encoder = new TextEncoder();
-    const addressBuffer = encoder.encode(address + '\0');
-    const typeTag = encoder.encode(',f\0\0');
-
-    const floatBuffer = Buffer.alloc(4);
-    floatBuffer.writeFloatBE(value, 0);
-
-    const addressPadded = Buffer.concat([addressBuffer, Buffer.alloc(4 - (addressBuffer.length % 4))]);
-    return Buffer.concat([addressPadded, typeTag, floatBuffer]);
-}
-
-function updateWaveform(levels) {
-    const canvas = document.getElementById('audioCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const colors = ['red', 'green', 'blue', 'purple'];
-    levels.forEach((level, i) => {
-        ctx.fillStyle = colors[i];
-        ctx.fillRect(i * (canvas.width / 4), canvas.height - level * canvas.height, canvas.width / 4 - 10, level * canvas.height);
-    });
-}
-
-document.getElementById('portInput').addEventListener('change', (event) => {
-    const newPort = parseInt(event.target.value, 10);
-    if (!isNaN(newPort)) {
-        window.electronAPI.updateOscPort(newPort); // Update main process
-    }
-});
-
-async function loadSettings() {
-    const oscPort = await window.electronAPI.getOscPort();
-    document.getElementById('portInput').value = oscPort;
-}
-
-loadSettings();
+document.getElementById('clearLog').addEventListener('click', () => {
+  document.getElementById('oscLogText').value = ''
+  oscHistory = []
+  updateOscGraph()
+})
