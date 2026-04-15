@@ -7,5 +7,7 @@ window.electronAPI = {
   receiveFromMain: (channel, func) => ipcRenderer.on(channel, (_, ...args) => func(...args)),
   getOscPort: () => ipcRenderer.invoke('getOscPort'),
   updateOscPort: (newPort) => ipcRenderer.send('updateOscPort', newPort),
+  getSetting: (key, defaultValue) => ipcRenderer.invoke('getSetting', key, defaultValue),
+  saveSetting: (key, value) => ipcRenderer.invoke('saveSetting', key, value),
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
 };

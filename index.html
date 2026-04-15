@@ -129,8 +129,8 @@
       <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('settings')">
         Settings
       </button>
-      <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('connect')">
-        Connect
+      <button class="tab-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700" onclick="openTab('oscLog')">
+        OSC Log
       </button>
     </div>
 
@@ -138,8 +138,8 @@
     <div id="waveform" class="tab active text-center bg-gray-800 border border-gray-600 rounded-xl p-4 shadow-md">
       <canvas id="audioCanvas" class="w-full h-64 rounded-lg bg-gray-900"></canvas>
       <div class="flex justify-between text-sm mt-3 text-gray-400">
-        <span>Bass</span>
         <span>Low</span>
+        <span>Bass</span>
         <span>Mid</span>
         <span>Treble</span>
       </div>
@@ -156,30 +156,49 @@
       </div>
 
       <div>
-        <label for="portInput" class="block mb-1 font-semibold">OSC Port</label>
+        <label for="portInput" class="block mb-1 font-semibold">OSC Send Port</label>
         <input type="number" id="portInput" class="bg-gray-600 text-white rounded-md px-3 py-2 w-full"
           placeholder="Enter Port (e.g., 9000)" />
       </div>
 
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label for="receiverPortInput" class="block mb-1 font-semibold">VRChat Receive Port</label>
+          <input type="number" id="receiverPortInput" class="bg-gray-600 text-white rounded-md px-3 py-2 w-full"
+            placeholder="Enter Port (e.g., 9001)" />
+        </div>
+        <div class="flex items-end">
+          <label class="flex items-center w-full bg-gray-800 rounded-md px-3 py-2">
+            <input type="checkbox" id="enableReceive" class="mr-2" />
+            Enable VRChat OSC Receive
+          </label>
+        </div>
+      </div>
+
       <!-- Gains -->
       <div>
-        <label class="block font-semibold mb-1">Bass Gain</label>
-        <input type="range" id="bassGain" class="w-full accent-accent" min="1" max="5" step="0.1" value="1" />
+        <label class="block font-semibold mb-1">Gain: <span id="gainValue">2.0</span></label>
+        <input type="range" id="gainSlider" class="w-full accent-accent" min="0.1" max="10" step="0.1" value="2.0" />
       </div>
 
       <div>
-        <label class="block font-semibold mb-1">Low Gain</label>
-        <input type="range" id="lowGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+        <label class="block font-semibold mb-1">Low Boost (20-120 Hz): <span id="lowBoostValue">2.6</span></label>
+        <input type="range" id="lowBoostSlider" class="w-full accent-accent" min="0.1" max="10" step="0.1" value="2.6" />
       </div>
 
       <div>
-        <label class="block font-semibold mb-1">Mid Gain</label>
-        <input type="range" id="midGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+        <label class="block font-semibold mb-1">Bass Boost (120-250 Hz): <span id="bassBoostValue">3.0</span></label>
+        <input type="range" id="bassBoostSlider" class="w-full accent-accent" min="0.1" max="10" step="0.1" value="3.0" />
       </div>
 
       <div>
-        <label class="block font-semibold mb-1">Treble Gain</label>
-        <input type="range" id="trebleGain" class="w-full accent-accent" min="1" max="3" step="0.1" value="1" />
+        <label class="block font-semibold mb-1">Mid Boost (250-4000 Hz): <span id="midBoostValue">2.0</span></label>
+        <input type="range" id="midBoostSlider" class="w-full accent-accent" min="0.1" max="10" step="0.1" value="2.0" />
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Treble Boost (4000-20000 Hz): <span id="trebleBoostValue">3.4</span></label>
+        <input type="range" id="trebleBoostSlider" class="w-full accent-accent" min="0.1" max="10" step="0.1" value="3.4" />
       </div>
 
       <button id="toggleAudio"
@@ -188,18 +207,16 @@
       </button>
     </div>
 
-    <!-- Connect -->
-    <div id="connect" class="tab space-y-3 bg-gray-700 border border-gray-600 rounded-xl p-4 shadow-md text-white">
-      <h3 class="text-xl font-semibold mb-2">Spotify Integration</h3>
-      <button id="linkSpotify" class="tab-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">
-        Link Spotify
+    <!-- OSC Log -->
+    <div id="oscLog" class="tab space-y-4 bg-gray-700 border border-gray-600 rounded-xl p-4 shadow-md text-white">
+      <h3 class="text-xl font-semibold mb-2">OSC Messages & Graph</h3>
+      <canvas id="oscGraph" class="w-full h-64 rounded-lg bg-gray-900 mb-4"></canvas>
+      <textarea id="oscLogText" class="w-full h-32 bg-gray-600 text-white rounded-md p-2" readonly></textarea>
+      <button id="clearLog" class="tab-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md">
+        Clear Log
       </button>
-      <div id="trackInfo" class="text-white mt-3"></div>
-      <label class="flex items-center mt-3 text-white">
-        <input class="mr-2" type="checkbox" id="liveTrackToggle" checked />
-        Enable Live Track Updates
-      </label>
     </div>
+
   </div>
 
   <script src="renderer.js"></script>
@@ -294,45 +311,11 @@
       });
     }
 
-    // --- Legacy toggle save ---
-    const legacyToggle = document.getElementById("legacyToggle");
-    legacyToggle.checked = JSON.parse(localStorage.getItem("legacyMode") || "false");
-    legacyToggle.addEventListener("change", () => {
-      localStorage.setItem("legacyMode", legacyToggle.checked);
-    });
+    // Theme persistence is handled in localStorage; app settings are stored in Electron Store.
+  </script>
+</body>
 
-    // --- Save selected audio device ---
-    const audioSelect = document.getElementById("audioDeviceSelect");
-    audioSelect.addEventListener("change", () => {
-      localStorage.setItem("selectedAudioDevice", audioSelect.value);
-    });
-
-    // --- Restore saved audio device ---
-    window.addEventListener("load", async () => {
-      await new Promise((r) => setTimeout(r, 500));
-      const savedDevice = localStorage.getItem("selectedAudioDevice");
-      if (savedDevice) {
-        const opt = [...audioSelect.options].find(o => o.value === savedDevice);
-        if (opt) audioSelect.value = savedDevice;
-      }
-    });
-
-    /*document.getElementById('linkSpotify').addEventListener('click', () => {
-      window.open('http://yourserver.com/authorize', '_blank'); // Open the authorization link
-    });*/
-
-    // Listen for the tokens from your server (use IPC or another method for receiving tokens)
-    /*window.electronAPI.receiveTokens((event, tokens) => {
-      localStorage.setItem('spotify_access_token', tokens.accessToken);
-      localStorage.setItem('spotify_refresh_token', tokens.refreshToken);
-    });*/
-
-    // Display track info
-    /*window.electronAPI.updateTrackInfo((event, trackInfo) => {
-      document.getElementById('trackInfo').innerText = trackInfo
-         ? `Now Playing: ${trackInfo.artist} - ${trackInfo.title}`
-          : 'No track currently playing';
-    });*/
+</html>
   </script>
 </body>
 

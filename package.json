@@ -24,10 +24,16 @@
       "output": "dist",
       "buildResources": "assets"
     },
-    "files": ["**/*", "!node_modules/.cache"],
+    "files": [
+      "**/*",
+      "!node_modules/.cache"
+    ],
     "win": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
-      "target": ["nsis", "msi"],
+      "target": [
+        "nsis",
+        "msi"
+      ],
       "icon": "assets/icon.ico",
       "files": [
         "main.js",
@@ -62,8 +68,7 @@
     "fft-js": "^0.0.12",
     "mathjs": "^13.2.1",
     "node-fetch": "^3.3.2",
-    "node-window-manager": "^2.2.4",
-    "osc-min": "^2.1.1"
+    "node-window-manager": "^2.2.4"
   },
   "devDependencies": {
     "electron": "^31.3.1",
